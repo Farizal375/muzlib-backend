@@ -1,4 +1,6 @@
 // File: prisma/schema.prisma
+// Schema disinkronkan dengan muzlib-parktikum-webprog
+// agar menggunakan database Supabase yang sama.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,26 +12,65 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ============================================================
 // 1. Enum Role
+// ============================================================
 enum Role {
   USER
   ADMIN
 }
 
-// 2. Model User
+// ============================================================
+// 2. Model User — Mendukung OAuth (password nullable)
+// ============================================================
 model User {
-  id        String     @id @default(cuid()) 
-  name      String?    
-  email     String     @unique
-  password  String    
-  role      Role       @default(USER)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?   // Nullable — user OAuth tidak punya password
+  image         String?
+  role          Role      @default(USER)
+
+  // Relasi ke model NextAuth (Account)
+  accounts  Account[]
+
+  // Relasi ke Bookmark
   bookmarks Bookmark[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// 3. Model Book
+// ============================================================
+// 3. Model Account — Menyimpan data OAuth provider (Google, dll)
+//    Dibutuhkan untuk kompatibilitas dengan @auth/prisma-adapter
+// ============================================================
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// ============================================================
+// 4. Model Book
+// ============================================================
 model Book {
   id            String     @id @default(cuid())
   openLibraryId String     @unique
@@ -49,7 +90,9 @@ model Book {
   bookmarks     Bookmark[]
 }
 
-// 4. Model Bookmark
+// ============================================================
+// 5. Model Bookmark
+// ============================================================
 model Bookmark {
   id        String   @id @default(cuid())
   userId    String
@@ -62,11 +105,13 @@ model Bookmark {
   @@unique([userId, bookId])
 }
 
-// Tabel untuk menyimpan konfigurasi dinamis aplikasi
+// ============================================================
+// 6. Model SystemConfig — Konfigurasi dinamis aplikasi
+// ============================================================
 model SystemConfig {
   id    String @id @default(cuid())
   key   String @unique // Contoh: "trending_limit"
-  value String // Contoh: "40" (Disimpan sebagai string agar fleksibel)
+  value String          // Contoh: "40" (disimpan sebagai string agar fleksibel)
   
   updatedAt DateTime @updatedAt
 }

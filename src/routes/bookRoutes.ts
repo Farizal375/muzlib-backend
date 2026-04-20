@@ -8,11 +8,9 @@ const router: Router = Router();
 // Rute publik (tanpa auth) - untuk homepage
 router.get('/featured', getFeaturedBooks as unknown as RequestHandler);
 
-// Semua endpoint wajib dilindungi (verifyToken)
-// Hanya ADMIN yang boleh menambah, mengedit, dan menghapus buku
-
-router.get('/', verifyToken, getAllBooks as unknown as RequestHandler);
-router.get('/:id', verifyToken, getBookById as unknown as RequestHandler);
+// Endpoint baca buku bersifat publik (bisa diakses guest)
+router.get('/', getAllBooks as unknown as RequestHandler);
+router.get('/:id', getBookById as unknown as RequestHandler);
 
 router.post('/', verifyToken, requireAdmin, createBook as unknown as RequestHandler);
 router.put('/:id', verifyToken, requireAdmin, updateBook as unknown as RequestHandler);
