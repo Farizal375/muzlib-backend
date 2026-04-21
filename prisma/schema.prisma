@@ -1,3 +1,7 @@
+// File: prisma/schema.prisma
+// Schema disinkronkan dengan muzlib-parktikum-webprog
+// agar menggunakan database Supabase yang sama.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,40 +12,62 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model User {
-  id            String     @id @default(cuid())
-  name          String?
-  email         String?    @unique
-  emailVerified DateTime?
-  password      String?
-  image         String?
-  role          Role       @default(USER)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  accounts      Account[]
-  bookmarks     Bookmark[]
+// ============================================================
+// 1. Enum Role
+// ============================================================
+enum Role {
+  USER
+  ADMIN
 }
 
+// ============================================================
+// 2. Model User — Mendukung OAuth (password nullable)
+// ============================================================
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?   // Nullable — user OAuth tidak punya password
+  image         String?
+  role          Role      @default(USER)
+
+  // Relasi ke model NextAuth (Account)
+  accounts  Account[]
+
+  // Relasi ke Bookmark
+  bookmarks Bookmark[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 3. Model Account — Menyimpan data OAuth provider (Google, dll)
+//    Dibutuhkan untuk kompatibilitas dengan @auth/prisma-adapter
+
 model Account {
-  id                String   @id @default(cuid())
+  id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
+// 4. Model Book
 model Book {
   id            String     @id @default(cuid())
   openLibraryId String     @unique
@@ -49,33 +75,38 @@ model Book {
   author        String
   coverUrl      String
   publishYear   Int
-  description   String?
+  description   String?    @db.Text
+  
+  // Kolom Admin Features
   isFeatured    Boolean    @default(false)
   isHidden      Boolean    @default(false)
+  
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+
   bookmarks     Bookmark[]
 }
 
+// ============================================================
+// 5. Model Bookmark
+// ============================================================
 model Bookmark {
   id        String   @id @default(cuid())
   userId    String
   bookId    String
   createdAt DateTime @default(now())
-  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@unique([userId, bookId])
 }
 
+// 6. Model SystemConfig — Konfigurasi dinamis aplikasi
 model SystemConfig {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
+  id    String @id @default(cuid())
+  key   String @unique // Contoh: "trending_limit"
+  value String          // Contoh: "40" (disimpan sebagai string agar fleksibel)
+  
   updatedAt DateTime @updatedAt
-}
-
-enum Role {
-  USER
-  ADMIN
 }

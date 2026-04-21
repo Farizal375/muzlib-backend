@@ -25,6 +25,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint (untuk Railway)
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'MuzLib API is running 🚀' });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -32,8 +37,8 @@ app.use('/api/books', bookRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(` Server berjalan di port ${PORT}`);
+// Start server — Railway menyediakan PORT via environment variable
+const PORT = parseInt(process.env.PORT || '5000', 10);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server berjalan di port ${PORT}`);
 });
