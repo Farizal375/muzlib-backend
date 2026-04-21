@@ -1,5 +1,6 @@
 // File: src/controllers/bookmarkController.ts
 import { Request, Response } from 'express';
+import { handleError } from '../utils/errorHandler';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();

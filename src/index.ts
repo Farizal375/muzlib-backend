@@ -9,8 +9,8 @@ import bookRoutes from './routes/bookRoutes';
 import bookmarkRoutes from './routes/bookmarkRoutes';
 import adminRoutes from './routes/adminRoutes';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables — override: true agar nilai dari .env selalu dipakai
+dotenv.config({ override: true });
 
 // Inisialisasi Express app
 const app: Express = express();
@@ -18,6 +18,12 @@ const app: Express = express();
 // Middleware setup
 app.use(cors());
 app.use(express.json());
+
+// Request Logger agar terlihat di terminal
+app.use((req, res, next) => {
+  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

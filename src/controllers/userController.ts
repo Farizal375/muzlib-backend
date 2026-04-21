@@ -1,5 +1,6 @@
 // File: src/controllers/userController.ts
 import { Request, Response } from 'express';
+import { handleError } from '../utils/errorHandler';
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 

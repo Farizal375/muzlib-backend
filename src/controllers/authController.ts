@@ -1,12 +1,26 @@
-// File: src/controllers/authController.ts
 import { Request, Response } from 'express';
+import { handleError } from '../utils/errorHandler';
 import { PrismaClient, User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { OAuth2Client } from 'google-auth-library';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const prisma = new PrismaClient();
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Supabase admin client — lazy initialization agar tidak crash saat ENV belum terisi
+let _supabaseAdmin: SupabaseClient | null = null;
+function getSupabaseAdmin(): SupabaseClient {
+  if (_supabaseAdmin) return _supabaseAdmin;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key || key === 'ISI_DENGAN_SERVICE_ROLE_KEY_ANDA') {
+    throw new Error('SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY belum dikonfigurasi di .env');
+  }
+  _supabaseAdmin = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+  return _supabaseAdmin;
+}
 
 // 1. Definisikan tipe untuk Request Body secara eksplisit
 interface AuthRequestBody {
@@ -33,9 +47,9 @@ interface UserWithPassword {
   updatedAt: Date;
 }
 
-// 4. Tipe untuk request body Google Sign-In
+// 4. Tipe untuk request body Google Sign-In (sekarang via Supabase)
 interface GoogleSignInBody {
-  idToken?: string;
+  supabaseToken?: string;
 }
 
 // Helper: generate JWT Express
@@ -200,49 +214,43 @@ export const login = async (
 // ============================================================
 // FUNGSI GOOGLE SIGN-IN (SSO — untuk Flutter)
 // POST /api/auth/google-signin
-// Body: { idToken: string }  ← Google ID Token dari Flutter google_sign_in package
+// Body: { supabaseToken: string }  ← Supabase Access Token dari Flutter
 // ============================================================
 export const googleSignIn = async (
   req: Request<Record<string, never>, Record<string, never>, GoogleSignInBody>,
   res: Response
 ): Promise<void> => {
   try {
-    const { idToken } = req.body;
+    const { supabaseToken } = req.body;
 
-    if (!idToken) {
-      res.status(400).json({ success: false, message: 'Google ID Token wajib disertakan' });
+    if (!supabaseToken) {
+      res.status(400).json({ success: false, message: 'Supabase Token wajib disertakan' });
       return;
     }
 
-    if (!process.env.GOOGLE_CLIENT_ID) {
-      throw new Error('GOOGLE_CLIENT_ID tidak dikonfigurasi di server');
-    }
+    // 1. Verifikasi Supabase Token via Supabase JS client (cara resmi)
+    const { data: { user: supabaseUser }, error: supabaseError } = await getSupabaseAdmin().auth.getUser(supabaseToken);
 
-    // 1. Verifikasi Google ID Token ke Google API
-    let ticket;
-    try {
-      ticket = await googleClient.verifyIdToken({
-        idToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-    } catch {
+    if (supabaseError || !supabaseUser) {
+      console.error('[googleSignIn] Supabase token error:', supabaseError?.message);
       res.status(401).json({
         success: false,
-        message: 'Google ID Token tidak valid atau sudah kedaluwarsa'
+        message: 'Supabase Token tidak valid atau sudah kedaluwarsa'
       });
       return;
     }
 
-    const googlePayload = ticket.getPayload();
-    if (!googlePayload || !googlePayload.email) {
+    const email = supabaseUser.email;
+    const name = supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name;
+    const picture = supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture;
+
+    if (!email) {
       res.status(401).json({
         success: false,
-        message: 'Gagal mengambil data dari Google Token'
+        message: 'Gagal mengambil email dari Supabase Token'
       });
       return;
     }
-
-    const { email, name, picture, sub: googleId } = googlePayload;
 
     // 2. Cari atau buat user di database (upsert berdasarkan email)
     //    Gunakan findFirst + create/update secara terpisah untuk menghindari
@@ -277,7 +285,7 @@ export const googleSignIn = async (
             create: {
               type: 'oauth',
               provider: 'google',
-              providerAccountId: googleId,
+              providerAccountId: supabaseUser.id,
             },
           },
         },
