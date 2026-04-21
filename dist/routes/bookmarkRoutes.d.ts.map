@@ -1,1 +1,1 @@
-{"version":3,"file":"bookmarkRoutes.d.ts","sourceRoot":"","sources":["../../src/routes/bookmarkRoutes.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,MAAM,EAAkB,MAAM,SAAS,CAAC;AAIjD,QAAA,MAAM,MAAM,EAAE,MAAiB,CAAC;AAQhC,eAAe,MAAM,CAAC"}
+{"version":3,"file":"bookmarkRoutes.d.ts","sourceRoot":"","sources":["../../src/routes/bookmarkRoutes.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,MAAM,EAAkB,MAAM,SAAS,CAAC;AAIjD,QAAA,MAAM,MAAM,EAAE,MAAiB,CAAC;AAYhC,eAAe,MAAM,CAAC"}

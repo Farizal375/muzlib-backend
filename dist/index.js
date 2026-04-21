@@ -11,8 +11,9 @@ const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const bookRoutes_1 = __importDefault(require("./routes/bookRoutes"));
 const bookmarkRoutes_1 = __importDefault(require("./routes/bookmarkRoutes"));
-// Load environment variables
-dotenv_1.default.config();
+const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
+// Load environment variables — override: true agar nilai dari .env selalu dipakai
+dotenv_1.default.config({ override: true });
 // Inisialisasi Express app
 const app = (0, express_1.default)();
 // Middleware setup
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes_1.default);
 app.use('/api/users', userRoutes_1.default);
 app.use('/api/books', bookRoutes_1.default);
 app.use('/api/bookmarks', bookmarkRoutes_1.default);
+app.use('/api/admin', adminRoutes_1.default);
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

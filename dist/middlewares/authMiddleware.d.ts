@@ -11,9 +11,6 @@ declare global {
         }
     }
 }
-/**
- * Middleware untuk memverifikasi apakah pengguna sudah login (Token Valid)
- */
 export declare const verifyToken: (req: Request, res: Response, next: NextFunction) => void;
 /**
  * Middleware untuk memastikan pengguna memiliki peran ADMIN
